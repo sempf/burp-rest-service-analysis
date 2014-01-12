@@ -29,18 +29,29 @@ public class BurpExtender implements IBurpExtender, IScannerCheck {
     private OutputStream output;
     
     //Check for apisecret
-    //This is hard, but I can look for the common variable names
-    private static final Pattern FACEBOOK_API = Pattern.compile("&[aA][pP][pP][sS][eE][cC][rR][eE][tT]=");
-    private static final Pattern FACEBOOK_API_2 = Pattern.compile("&[aA][pP][pP]_[sS][eE][cC][rR][eE][[tT]=");
-    private static final Pattern GOOGLE_API = Pattern.compile("&[aA][pP][iI][sS][eE][cC][rR][eE][tT]=");
-    private static final Pattern GOOGLE_API_2 = Pattern.compile("&[aA][pP][iI]_[sS][eE][cC][rR][eE][tT]=");
+    private static final Pattern FACEBOOK_API = Pattern.compile("&[aA][pP][pP]_?[sS][eE][cC][rR][eE][[tT]=");
+    private static final Pattern GOOGLE_API = Pattern.compile("&[aA][pP][iI]_?[sS][eE][cC][rR][eE][tT]=");
+    private static final Pattern AMAZON_API = Pattern.compile("&AWSSecretAccessKey=");
+    private static final Pattern LINKEDIN_API = Pattern.compile("&Secret[-_]?Key=");
+    private static final Pattern LINKEDIN_OAUTH = Pattern.compile("&OAuth[_-]?User[_-]?Secret=");
+    private static final Pattern WORDPRESS_API = Pattern.compile("&AUTH_KEY=");
+    private static final Pattern WORDPRESS_SEC_API = Pattern.compile("&SECURE_AUTH_KEY=");
+    private static final Pattern WORDPRESS_LOGGED_IN = Pattern.compile("&LOGGED_IN_KEY=");
+    private static final Pattern WORDPRESS_NONCE = Pattern.compile("&NONCE_KEY=");
+    private static final Pattern FLICKR_OAUTH = Pattern.compile("&oauth_client_secret=");
 
-    private static final List<MatchRule> rules = new ArrayList<MatchRule>();
+    private static final List<MatchRule> apiSecretRules = new ArrayList<MatchRule>();
     static {
-	rules.add(new MatchRule(FACEBOOK_API, 1, "Facebook API Secret"));
-	rules.add(new MatchRule(FACEBOOK_API_2, 1, "Facebook API Secret"));
-	rules.add(new MatchRule(GOOGLE_API, 1, "Google API Secret"));
-	rules.add(new MatchRule(GOOGLE_API_2, 1, "Google API Secret"));
+	apiSecretRules.add(new MatchRule(FACEBOOK_API, 1, "Facebook API Secret"));
+	apiSecretRules.add(new MatchRule(GOOGLE_API, 1, "Google API Secret"));
+	apiSecretRules.add(new MatchRule(AMAZON_API, 1, "Amazon API Secret"));
+	apiSecretRules.add(new MatchRule(LINKEDIN_API, 1, "LinkedIn API Secret"));
+	apiSecretRules.add(new MatchRule(LINKEDIN_OAUTH, 1, "LinkedIn OAuth Secret"));
+	apiSecretRules.add(new MatchRule(WORDPRESS_API, 1, "WordPress API Auth Key"));
+	apiSecretRules.add(new MatchRule(WORDPRESS_SEC_API, 1, "WordPress Secure Auth Key"));
+	apiSecretRules.add(new MatchRule(WORDPRESS_LOGGED_IN, 1, "WordPress Logged In Key"));
+	apiSecretRules.add(new MatchRule(WORDPRESS_NONCE, 1, "Wordpress Nonce"));
+	apiSecretRules.add(new MatchRule(FLICKR_OAUTH, 1, "Flickr OAuth Secret"));
     }
     /**
      * implement IBurpExtender
@@ -79,7 +90,7 @@ public class BurpExtender implements IBurpExtender, IScannerCheck {
 	URL url = helpers.analyzeRequest(baseRequestResponse).getUrl();
 	println("Scanning for API Secrets in the URL: " + url.toString());
         
-	for (MatchRule rule : rules) {
+	for (MatchRule rule : apiSecretRules) {
 	    Matcher matcher = rule.getPattern().matcher(url.toString());
 	    while (matcher.find()) {
 		println("FOUND " + rule.getType() + "!");
