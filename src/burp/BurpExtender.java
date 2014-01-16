@@ -53,6 +53,22 @@ public class BurpExtender implements IBurpExtender, IScannerCheck {
 	apiSecretRules.add(new MatchRule(WORDPRESS_NONCE, 1, "Wordpress Nonce"));
 	apiSecretRules.add(new MatchRule(FLICKR_OAUTH, 1, "Flickr OAuth Secret"));
     }
+
+    //Check for anti-forgery token
+    private static final Pattern ASP_NET_TOKEN = Pattern.compile("__RequestVerificationToken");
+    private static final Pattern RAILS_TOKEN = Pattern.compile("protect_from_forgery");
+    private static final Pattern JAVA_TOKEN = Pattern.compile("cftoken");
+    private static final Pattern OWASP_PHP_TOKEN = Pattern.compile("nocsrf");
+
+    private static final List<MatchRule> antiForgeryTokenRules = new ArrayList<MatchRule>();
+    static {
+	antiForgeryTokenRules.add(new MatchRule(ASP_NET_TOKEN, 1, "ASP.NET Anti Forgery Token"));
+	antiForgeryTokenRules.add(new MatchRule(RAILS_TOKEN, 1, "Ruby on Rails Anti Forgery Token"));
+	antiForgeryTokenRules.add(new MatchRule(JAVA_TOKEN, 1, "Java Anti Forgery Token"));
+	antiForgeryTokenRules.add(new MatchRule(OWASP_PHP_TOKEN, 1, "PHP Anti Forgery Token"));
+    }
+    
+    
     /**
      * implement IBurpExtender
      */
@@ -82,6 +98,8 @@ public class BurpExtender implements IBurpExtender, IScannerCheck {
     @Override
     public List<IScanIssue> doPassiveScan(IHttpRequestResponse baseRequestResponse) {
 
+        //Now I need to look at the POST bodies for the Anti CSRF token
+        
         //Secrets in the URL can be here.
         List<ScannerMatch> matches = new ArrayList<ScannerMatch>();
 	List<IScanIssue> issues = new ArrayList<IScanIssue>();
