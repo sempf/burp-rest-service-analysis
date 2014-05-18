@@ -55,6 +55,7 @@ public class BurpExtender implements IBurpExtender, IScannerCheck {
     }
 
     //Check for anti-forgery token
+    //Wait, am I sure about this? Aren't REST services stateless?
     private static final Pattern ASP_NET_TOKEN = Pattern.compile("__RequestVerificationToken");
     private static final Pattern RAILS_TOKEN = Pattern.compile("protect_from_forgery");
     private static final Pattern JAVA_TOKEN = Pattern.compile("cftoken");
@@ -68,7 +69,34 @@ public class BurpExtender implements IBurpExtender, IScannerCheck {
 	antiForgeryTokenRules.add(new MatchRule(OWASP_PHP_TOKEN, 1, "PHP Anti Forgery Token"));
     }
     
-    
+    //Check all HTTP Verbs
+       private static final List<String> httpVerbRules = new ArrayList<String>();
+        static {
+            httpVerbRules.add("GET");
+            httpVerbRules.add("PUT");
+            httpVerbRules.add("POST");
+            httpVerbRules.add("OPTIONS");
+            httpVerbRules.add("HEAD");
+            httpVerbRules.add("TRACE");
+            httpVerbRules.add("CONNECT");
+            httpVerbRules.add("PROFIND");
+            httpVerbRules.add("PROPATCH");
+            httpVerbRules.add("CHECKOUT");
+            httpVerbRules.add("CHECKIN");
+            httpVerbRules.add("UNCHECKOUT");
+            httpVerbRules.add("MKCOL");
+            httpVerbRules.add("COPY");            
+            httpVerbRules.add("MOVE");            
+            httpVerbRules.add("LOCK");            
+            httpVerbRules.add("UNLOCK");            
+            httpVerbRules.add("MKWORKSPACE");            
+            httpVerbRules.add("UPDATE");            
+            httpVerbRules.add("LABEL");            
+            httpVerbRules.add("MERGE");            
+            httpVerbRules.add("BASELINE-CONTROL");            
+            httpVerbRules.add("MKACTIVITY");            
+        }
+
     /**
      * implement IBurpExtender
      */
@@ -170,7 +198,9 @@ public class BurpExtender implements IBurpExtender, IScannerCheck {
     @Override
     public List<IScanIssue> doActiveScan(IHttpRequestResponse baseRequestResponse, IScannerInsertionPoint insertionPoint) {
 
-        //In here be the goodness.
+        //Perform the active scan
+        //First, I need to check the current request with all HTTP verbs
+                
         
 	return null;
 
