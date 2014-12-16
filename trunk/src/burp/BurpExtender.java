@@ -63,14 +63,14 @@ public class BurpExtender implements IBurpExtender, IScannerCheck {
 
     private static final List<MatchRule> antiForgeryTokenRules = new ArrayList<MatchRule>();
     static {
-	antiForgeryTokenRules.add(new MatchRule(ASP_NET_TOKEN, 1, "ASP.NET Anti Forgery Token"));
-	antiForgeryTokenRules.add(new MatchRule(RAILS_TOKEN, 1, "Ruby on Rails Anti Forgery Token"));
-	antiForgeryTokenRules.add(new MatchRule(JAVA_TOKEN, 1, "Java Anti Forgery Token"));
-	antiForgeryTokenRules.add(new MatchRule(OWASP_PHP_TOKEN, 1, "PHP Anti Forgery Token"));
+		antiForgeryTokenRules.add(new MatchRule(ASP_NET_TOKEN, 1, "ASP.NET Anti Forgery Token"));
+		antiForgeryTokenRules.add(new MatchRule(RAILS_TOKEN, 1, "Ruby on Rails Anti Forgery Token"));
+		antiForgeryTokenRules.add(new MatchRule(JAVA_TOKEN, 1, "Java Anti Forgery Token"));
+		antiForgeryTokenRules.add(new MatchRule(OWASP_PHP_TOKEN, 1, "PHP Anti Forgery Token"));
     }
     
     //Check all HTTP Verbs
-       private static final List<String> httpVerbRules = new ArrayList<String>();
+    private static final List<String> httpVerbRules = new ArrayList<String>();
         static {
             httpVerbRules.add("GET");
             httpVerbRules.add("PUT");
@@ -102,22 +102,22 @@ public class BurpExtender implements IBurpExtender, IScannerCheck {
      */
     @Override
     public void registerExtenderCallbacks(final IBurpExtenderCallbacks callbacks) {
-	// keep a reference to our callbacks object
-	this.callbacks = callbacks;
-
-	// obtain an extension helpers object
-	helpers = callbacks.getHelpers();
-
-	// set our extension name
-	callbacks.setExtensionName("ReST Service Analysis");
-
-	// register ourselves as a custom scanner check
-	callbacks.registerScannerCheck(this);
+		// keep a reference to our callbacks object
+		this.callbacks = callbacks;
 	
-	//get the output stream for info messages
-	output = callbacks.getStdout();
+		// obtain an extension helpers object
+		helpers = callbacks.getHelpers();
 	
-	println("Loaded ReST Service Analysis");
+		// set our extension name
+		callbacks.setExtensionName("ReST Service Analysis");
+	
+		// register ourselves as a custom scanner check
+		callbacks.registerScannerCheck(this);
+		
+		//get the output stream for info messages
+		output = callbacks.getStdout();
+		
+		println("Loaded ReST Service Analysis");
     }
 
     /**
@@ -130,108 +130,108 @@ public class BurpExtender implements IBurpExtender, IScannerCheck {
         
         //Secrets in the URL can be here.
         List<ScannerMatch> matches = new ArrayList<ScannerMatch>();
-	List<IScanIssue> issues = new ArrayList<IScanIssue>();
-
-	//get the URL of the requst
-	URL url = helpers.analyzeRequest(baseRequestResponse).getUrl();
-	println("Scanning for API Secrets in the URL: " + url.toString());
-        
-	for (MatchRule rule : apiSecretRules) {
-	    Matcher matcher = rule.getPattern().matcher(url.toString());
-	    while (matcher.find()) {
-		println("FOUND " + rule.getType() + "!");
-		
-		//get the actual match 
-		String group;
-		if (rule.getMatchGroup() != null) {
-		    group = matcher.group(rule.getMatchGroup());
-		} else {
-		    group = matcher.group();
+		List<IScanIssue> issues = new ArrayList<IScanIssue>();
+	
+		//get the URL of the requst
+		URL url = helpers.analyzeRequest(baseRequestResponse).getUrl();
+		println("Scanning for API Secrets in the URL: " + url.toString());
+	        
+		for (MatchRule rule : apiSecretRules) {
+		    Matcher matcher = rule.getPattern().matcher(url.toString());
+		    while (matcher.find()) {
+			println("FOUND " + rule.getType() + "!");
+			
+			//get the actual match 
+			String group;
+			if (rule.getMatchGroup() != null) {
+			    group = matcher.group(rule.getMatchGroup());
+			} else {
+			    group = matcher.group();
+			}
+	
+			println("start: " + matcher.start() + " end: " + matcher.end() + " group: " + group);
+	
+			matches.add(new ScannerMatch(matcher.start(), matcher.end(), group, rule.getType()));
+		    }
 		}
-
-		println("start: " + matcher.start() + " end: " + matcher.end() + " group: " + group);
-
-		matches.add(new ScannerMatch(matcher.start(), matcher.end(), group, rule.getType()));
+	
+	        	// report the issues ------------------------
+		if (!matches.isEmpty()) {
+		    Collections.sort(matches);  //matches must be in order 
+		    StringBuilder description = new StringBuilder(matches.size() * 256);
+		    description.append("Values that are labeled as API secrets are appearing in the URLs or ReST service calls.<br>");
+		    description.append("The API Secret should be kept out of direct requests to the API. Any value in a URL can be intercepted by and attacker, even under SSL. URLs with parameters are regularly cached in routers, servers, and bookmark lists.<br><br>");
+		    description.append("The following API Secrets appear to be in the URL:<br><br>");
+		    
+		    List<int[]> startStop = new ArrayList<int[]>(1);
+		    for (ScannerMatch match : matches) {
+			println("Processing match: " + match);
+			println("    start: " + match.getStart() + " end: " + match.getEnd() + " match: " + match.getMatch() + " match: " + match.getMatch());
+	
+			//add a marker for code highlighting
+			startStop.add(new int[]{match.getStart(), match.getEnd()});
+	
+			//add a description
+			description.append("<li>");
+	
+			description.append(match.getType()).append(": ").append(match.getMatch());
+	
+		    }
+	
+		    println("    Description: " + description.toString());
+	
+		    issues.add(new CustomScanIssue(
+				baseRequestResponse.getHttpService(),
+				helpers.analyzeRequest(baseRequestResponse).getUrl(),
+				new IHttpRequestResponse[]{callbacks.applyMarkers(baseRequestResponse, null, startStop)},
+				"ReST API Secret found in URL",
+				description.toString(),
+				"High",
+	                        "Firm"));
+	
+		    println("issues: " + issues.size());
+	
+	        }
+	    	return issues;
 	    }
-	}
-
-        	// report the issues ------------------------
-	if (!matches.isEmpty()) {
-	    Collections.sort(matches);  //matches must be in order 
-	    StringBuilder description = new StringBuilder(matches.size() * 256);
-	    description.append("Values that are labeled as API secrets are appearing in the URLs or ReST service calls.<br>");
-	    description.append("The API Secret should be kept out of direct requests to the API. Any value in a URL can be intercepted by and attacker, even under SSL. URLs with parameters are regularly cached in routers, servers, and bookmark lists.<br><br>");
-	    description.append("The following API Secrets appear to be in the URL:<br><br>");
-	    
-	    List<int[]> startStop = new ArrayList<int[]>(1);
-	    for (ScannerMatch match : matches) {
-		println("Processing match: " + match);
-		println("    start: " + match.getStart() + " end: " + match.getEnd() + " match: " + match.getMatch() + " match: " + match.getMatch());
-
-		//add a marker for code highlighting
-		startStop.add(new int[]{match.getStart(), match.getEnd()});
-
-		//add a description
-		description.append("<li>");
-
-		description.append(match.getType()).append(": ").append(match.getMatch());
-
-	    }
-
-	    println("    Description: " + description.toString());
-
-	    issues.add(new CustomScanIssue(
-			baseRequestResponse.getHttpService(),
-			helpers.analyzeRequest(baseRequestResponse).getUrl(),
-			new IHttpRequestResponse[]{callbacks.applyMarkers(baseRequestResponse, null, startStop)},
-			"ReST API Secret found in URL",
-			description.toString(),
-			"High",
-                        "Firm"));
-
-	    println("issues: " + issues.size());
-
-        }
-    	return issues;
-    }
-
-    @Override
-    public List<IScanIssue> doActiveScan(IHttpRequestResponse baseRequestResponse, IScannerInsertionPoint insertionPoint) {
-
-        //Perform the active scan
-        //First, I need to check the current request with all HTTP verbs
-                
-        
-	return null;
+	
+	    @Override
+	    public List<IScanIssue> doActiveScan(IHttpRequestResponse baseRequestResponse, IScannerInsertionPoint insertionPoint) {
+	
+	        //Perform the active scan
+	        //First, I need to check the current request with all HTTP verbs
+	                
+	        
+		return null;
 
     }
 
     @Override
     public int consolidateDuplicateIssues(IScanIssue existingIssue, IScanIssue newIssue) {
-	// This method is called when multiple issues are reported for the same URL 
-	// path by the same extension-provided check. The value we return from this 
-	// method determines how/whether Burp consolidates the multiple issues
-	// to prevent duplication
-	//
-	// Since the issue name is sufficient to identify our issues as different,
-	// if both issues have the same name, only report the existing issue
-	// otherwise report both issues
-	if (existingIssue.getIssueDetail().equals(newIssue.getIssueDetail())) {
-	    println("DUPLICATE ISSUE! Consolidating...");
-	    return -1;
-	} else {
-	    return 0;
-	}
+		// This method is called when multiple issues are reported for the same URL 
+		// path by the same extension-provided check. The value we return from this 
+		// method determines how/whether Burp consolidates the multiple issues
+		// to prevent duplication
+		//
+		// Since the issue name is sufficient to identify our issues as different,
+		// if both issues have the same name, only report the existing issue
+		// otherwise report both issues
+		if (existingIssue.getIssueDetail().equals(newIssue.getIssueDetail())) {
+		    println("DUPLICATE ISSUE! Consolidating...");
+		    return -1;
+		} else {
+		    return 0;
+		}
     }
     
     private void println(String toPrint) {
-	try {
-	    output.write(toPrint.getBytes());
-	    output.write("\n".getBytes());
-	    output.flush();
-	} catch (IOException ioe) {
-	    ioe.printStackTrace();
-	} 
+		try {
+		    output.write(toPrint.getBytes());
+		    output.write("\n".getBytes());
+		    output.flush();
+		} catch (IOException ioe) {
+		    ioe.printStackTrace();
+		} 
     }
 }
 
