@@ -70,6 +70,7 @@ public class BurpExtender implements IBurpExtender, IScannerCheck {
     }
     
     //Check all HTTP Verbs
+    //Does Burp already do this?
     private static final List<String> httpVerbRules = new ArrayList<String>();
         static {
             httpVerbRules.add("GET");
@@ -155,7 +156,7 @@ public class BurpExtender implements IBurpExtender, IScannerCheck {
 		    }
 		}
 	
-	        	// report the issues ------------------------
+	    // report the issues ------------------------
 		if (!matches.isEmpty()) {
 		    Collections.sort(matches);  //matches must be in order 
 		    StringBuilder description = new StringBuilder(matches.size() * 256);
@@ -187,7 +188,7 @@ public class BurpExtender implements IBurpExtender, IScannerCheck {
 				"ReST API Secret found in URL",
 				description.toString(),
 				"High",
-	                        "Firm"));
+	            "Firm"));
 	
 		    println("issues: " + issues.size());
 	
@@ -195,12 +196,32 @@ public class BurpExtender implements IBurpExtender, IScannerCheck {
 	    	return issues;
 	    }
 	
-	    @Override
-	    public List<IScanIssue> doActiveScan(IHttpRequestResponse baseRequestResponse, IScannerInsertionPoint insertionPoint) {
+    @Override
+    public List<IScanIssue> doActiveScan(IHttpRequestResponse baseRequestResponse, IScannerInsertionPoint insertionPoint) {
 	
-	        //Perform the active scan
-	        //First, I need to check the current request with all HTTP verbs
-	                
+        //Perform the active scan
+        //First, I need to check the current request with all HTTP verbs
+		URL url = helpers.analyzeRequest(baseRequestResponse).getUrl();
+		println("Scanning for open HTTP verbs in the URL: " + url.toString());
+		for (String verb : httpVerbRules) {
+	    	HttpURLConnection connection = (HttpURLConnection) url.openConnection();
+	    	connection.setRequestMethod(verb);
+	    	int responseCode = connection.getResponseCode();
+	    	if   (responseCode != 405)
+	    	{
+	    		//Make a new issue
+	    		String description = new String();
+	    		description = "The URL " + url + " reports that the HTTP verb " + verb + " returns a " responseCode.ToString() "."
+			    issues.add(new CustomScanIssue(
+						baseRequestResponse.getHttpService(),
+						helpers.analyzeRequest(baseRequestResponse).getUrl(),
+						new IHttpRequestResponse[]{callbacks.applyMarkers(baseRequestResponse, null, startStop)},
+						"ReST API Secret found in URL",
+						description.toString(),
+						"Medium",
+			            "Firm"));
+	    	}
+		}
 	        
 		return null;
 
